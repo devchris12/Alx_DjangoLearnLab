@@ -1,4 +1,4 @@
-# relationship_app/models.py
+# LibraryProject/relationship_app/models.py
 
 from django.db import models
 
