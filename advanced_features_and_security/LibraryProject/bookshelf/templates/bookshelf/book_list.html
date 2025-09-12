@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Book List (Secure)</title>
+</head>
+<body>
+  <h1>Books</h1>
+
+  <form method="get">
+    {{ form.as_p }}
+    <button type="submit">Search</button>
+  </form>
+
+  <ul>
+    {% for b in books %}
+      <li>{{ b.title }}</li>
+    {% empty %}
+      <li>No books yet.</li>
+    {% endfor %}
+  </ul>
+
+  <p><a href="{% url 'form_example' %}">Create a book</a></p>
+</body>
+</html>
