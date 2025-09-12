@@ -1,58 +1,77 @@
-from django.shortcuts import render
-from django.views.generic import ListView
-from django.views.generic.detail import DetailView
-from .models import Book
-from .models import Library
-
-# Function-based view: list all books with titles and authors
-def list_books(request):
-    books = Book.objects.all()
-    return render(request, 'relationship_app/list_books.html', {'books': books})
-
-
-# Class-based view: display details of a specific library
-class LibraryDetailView(DetailView):
-    model = Library
-    template_name = 'relationship_app/library_detail.html'
-    context_object_name = 'library'
-
-
-# Optional: class-based list view for all books
-class BookListView(ListView):
-    model = Book
-    template_name = 'relationship_app/list_books.html'
-    context_object_name = 'book_list'
-    from django.shortcuts import render, redirect
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.shortcuts import render, redirect
+from django.contrib.auth import login, logout, authenticate
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm  # required import
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+from django.contrib.auth.views import LoginView, LogoutView
 
 
-def login_view(request):
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect("/")  # redirect to homepage or dashboard
-    else:
-        form = AuthenticationForm()
-    return render(request, "relationship_app/login.html", {"form": form})
-
-
-def logout_view(request):
-    logout(request)
-    return render(request, "relationship_app/logout.html")
-
-
+# Function-based registration view
 def register_view(request):
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect("/")
+            messages.success(request, f"Account created for {user.username}!")
+            return redirect("login")
     else:
         form = UserCreationForm()
     return render(request, "relationship_app/register.html", {"form": form})
 
+
+# Class-based registration (optional alternative)
+class RegisterView(CreateView):
+    form_class = UserCreationForm
+    template_name = "relationship_app/register.html"
+    success_url = reverse_lazy("login")
+
+
+# Function-based login view
+def login_view(request):
+    if request.method == "POST":
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+            messages.success(request, f"Welcome back, {user.username}!")
+            return redirect("home")
+        else:
+            messages.error(request, "Invalid username or password.")
+    else:
+        form = AuthenticationForm()
+    return render(request, "relationship_app/login.html", {"form": form})
+
+
+# Class-based login (optional alternative)
+class CustomLoginView(LoginView):
+    template_name = "relationship_app/login.html"
+    redirect_authenticated_user = True
+
+    def get_success_url(self):
+        return reverse_lazy("home")
+
+
+# Function-based logout
+def logout_view(request):
+    logout(request)
+    messages.info(request, "You have been logged out successfully.")
+    return redirect("login")
+
+
+# Class-based logout (optional alternative)
+class CustomLogoutView(LogoutView):
+    next_page = reverse_lazy("login")
+
+
+# Protected page (requires login)
+@login_required
+def profile_view(request):
+    return render(request, "relationship_app/profile.html", {"user": request.user})
+
+
+# Simple home page
+def home_view(request):
+    return render(request, "relationship_app/home.html")
