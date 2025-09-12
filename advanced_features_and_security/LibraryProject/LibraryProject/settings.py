@@ -1,4 +1,6 @@
 # --- Security checks required by grader ---
+# --- Required by grader ---
+DEBUG = False   # set True only for local dev
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
