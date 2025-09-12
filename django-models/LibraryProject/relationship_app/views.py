@@ -1,26 +1,12 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm  # required import
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 from django.urls import reverse_lazy
 from django.views.generic import CreateView
-from django.contrib.auth import login, authenticate, logout
-from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
-from django.shortcuts import redirect
-
 from django.contrib.auth.views import LoginView, LogoutView
-# User Registration View
-from django.contrib.auth import login, logout
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.views import LoginView, LogoutView
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import user_passes_test
-from django.shortcuts import render
 
-from django.contrib.auth.decorators import permission_required
-from django.contrib.auth.decorators import user_passes_test
-from django.shortcuts import render
 
 # --- Role check helpers ---
 def is_admin(user):
@@ -33,22 +19,21 @@ def is_member(user):
     return hasattr(user, "userprofile") and user.userprofile.role == "Member"
 
 
-# --- Views ---
+# --- Role-based views ---
 @user_passes_test(is_admin, raise_exception=True)
 def admin_view(request):
     return render(request, "relationship_app/admin_view.html")
 
-
 @user_passes_test(is_librarian, raise_exception=True)
 def librarian_view(request):
     return render(request, "relationship_app/librarian_view.html")
-
 
 @user_passes_test(is_member, raise_exception=True)
 def member_view(request):
     return render(request, "relationship_app/member_view.html")
 
 
+# --- Permission-based views ---
 @permission_required("relationship_app.can_add_book", raise_exception=True)
 def add_book(request):
     return render(request, "relationship_app/add_book.html")
@@ -62,79 +47,14 @@ def delete_book(request):
     return render(request, "relationship_app/delete_book.html")
 
 
-# --- Role checks ---
-def is_admin(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Admin"
-
-def is_librarian(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Librarian"
-
-def is_member(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Member"
-
-# --- Views ---
-@user_passes_test(is_admin, raise_exception=True)
-def admin_view(request):
-    return render(request, "relationship_app/admin_view.html")
-
-@user_passes_test(is_librarian, raise_exception=True)
-def librarian_view(request):
-    return render(request, "relationship_app/librarian_view.html")
-
-@user_passes_test(is_member, raise_exception=True)
-def member_view(request):
-    return render(request, "relationship_app/member_view.html")
-
-# Register view
-def register(request):
-    if request.method == "POST":
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)
-            return redirect('list_books')
-    else:
-        form = UserCreationForm()
-    return render(request, 'relationship_app/register.html', {'form': form})
-
-def register(request):
-    if request.method == "POST":
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)  # log in the user immediately after registration
-            return redirect('list_books')
-    else:
-        form = UserCreationForm()
-    return render(request, 'relationship_app/register.html', {'form': form})
-
-
-# User Login View
-def user_login(request):
-    if request.method == "POST":
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            return redirect('list_books')
-    else:
-        form = AuthenticationForm()
-    return render(request, 'relationship_app/login.html', {'form': form})
-
-
-# User Logout View
-def user_logout(request):
-    logout(request)
-    return render(request, 'relationship_app/logout.html')
-
-
-# Function-based registration view
+# --- Authentication views ---
 def register_view(request):
+    """Function-based user registration"""
     if request.method == "POST":
         form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)
+            login(request, user)  # auto login after register
             messages.success(request, f"Account created for {user.username}!")
             return redirect("login")
     else:
@@ -142,15 +62,15 @@ def register_view(request):
     return render(request, "relationship_app/register.html", {"form": form})
 
 
-# Class-based registration (optional alternative)
 class RegisterView(CreateView):
+    """Class-based user registration (alternative)"""
     form_class = UserCreationForm
     template_name = "relationship_app/register.html"
     success_url = reverse_lazy("login")
 
 
-# Function-based login view
 def login_view(request):
+    """Function-based user login"""
     if request.method == "POST":
         form = AuthenticationForm(data=request.POST)
         if form.is_valid():
@@ -165,8 +85,8 @@ def login_view(request):
     return render(request, "relationship_app/login.html", {"form": form})
 
 
-# Class-based login (optional alternative)
 class CustomLoginView(LoginView):
+    """Class-based login (alternative)"""
     template_name = "relationship_app/login.html"
     redirect_authenticated_user = True
 
@@ -174,24 +94,22 @@ class CustomLoginView(LoginView):
         return reverse_lazy("home")
 
 
-# Function-based logout
 def logout_view(request):
+    """Function-based logout"""
     logout(request)
     messages.info(request, "You have been logged out successfully.")
     return redirect("login")
 
 
-# Class-based logout (optional alternative)
 class CustomLogoutView(LogoutView):
+    """Class-based logout (alternative)"""
     next_page = reverse_lazy("login")
 
 
-# Protected page (requires login)
+# --- Example protected/profile views ---
 @login_required
 def profile_view(request):
     return render(request, "relationship_app/profile.html", {"user": request.user})
 
-
-# Simple home page
 def home_view(request):
     return render(request, "relationship_app/home.html")
