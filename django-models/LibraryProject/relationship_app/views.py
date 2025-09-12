@@ -3,6 +3,11 @@
 from django.shortcuts import render
 from django.views.generic import DetailView
 from .models import Library, Book # Correctly import the Library model
+# Correctly import the generic views you need
+from django.views.generic import ListView
+from .models import Book # Make sure to import the Book model
+from django.views.generic import ListView, DetailView 
+from .models import Book, Library # Also import your models
 
 class LibraryDetailView(DetailView):
     """
@@ -14,8 +19,6 @@ class LibraryDetailView(DetailView):
     context_object_name = 'library' # Name to use in the template
 # relationship_app/views.py
 
-from django.views.generic import ListView
-from .models import Book # Make sure to import the Book model
 
 class BookListView(ListView):
     """
@@ -28,9 +31,7 @@ class BookListView(ListView):
 
 # relationship_app/views.py
 
-# Correctly import the generic views you need
-from django.views.generic import ListView, DetailView 
-from .models import Book, Library # Also import your models
+
 
 # --- Example using DetailView ---
 # (For showing details of a single library)
