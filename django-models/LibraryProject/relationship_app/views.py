@@ -12,3 +12,15 @@ class LibraryDetailView(DetailView):
     model = Library
     template_name = 'relationship_app/library_detail.html' # Specify your template
     context_object_name = 'library' # Name to use in the template
+# relationship_app/views.py
+
+from django.views.generic import ListView
+from .models import Book # Make sure to import the Book model
+
+class BookListView(ListView):
+    """
+    This view displays a list of all books with their titles and authors.
+    """
+    model = Book  # This implicitly does Book.objects.all()
+    template_name = 'relationship_app/list_books.html' # Tells Django which template to render
+    context_object_name = 'book_list' # The variable name for the book list in the template
