@@ -1,5 +1,7 @@
 # --- Security checks required by grader ---
 # --- Required by grader ---
+# --- Custom user model ---
+AUTH_USER_MODEL = 'bookshelf.CustomUser'
 DEBUG = False   # set True only for local dev
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
