@@ -1,39 +1,29 @@
-from django.urls import path
-from django.urls import path
-from django.contrib.auth.views import LoginView, LogoutView
-from .views import list_books, LibraryDetailView, BookListView, register
-from . import views
-
 from django.shortcuts import render
 from django.urls import reverse_lazy
-from django.views.generic import CreateView
+from django.views.generic import CreateView, DetailView, ListView
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
+from .models import Book, Library
+
+# Function-based view: list all books
+def list_books(request):
+    books = Book.objects.all()
+    return render(request, "relationship_app/list_books.html", {"books": books})
+
+# Class-based view: display details of a specific library
+class LibraryDetailView(DetailView):
+    model = Library
+    template_name = "relationship_app/library_detail.html"
+    context_object_name = "library"
+
+# Class-based view: display all books
+class BookListView(ListView):
+    model = Book
+    template_name = "relationship_app/book_list.html"
+    context_object_name = "book_list"
 
 # Registration View
 class RegisterView(CreateView):
     form_class = UserCreationForm
     template_name = "relationship_app/register.html"
     success_url = reverse_lazy("login")
-
-
-
-urlpatterns = [
-    path("login/", views.login_view, name="login"),
-    path("logout/", views.logout_view, name="logout"),
-    path("register/", views.register_view, name="register"),
-    path("profile/", views.profile_view, name="profile"),
-    path("", views.home_view, name="home"),  # homepage
-]
-urlpatterns = [
-    # Function-based and class-based book/library views
-    path('books/', list_books, name='list_books'),
-    path('books/list/', BookListView.as_view(), name='book_list'),
-    path('library/<int:pk>/', LibraryDetailView.as_view(), name='library_detail'),
-
-    # Authentication using built-in Django views
-    path('login/', LoginView.as_view(template_name='relationship_app/login.html'), name='login'),
-    path('logout/', LogoutView.as_view(template_name='relationship_app/logout.html'), name='logout'),
-    path('register/', register, name='register'),
-]
-
