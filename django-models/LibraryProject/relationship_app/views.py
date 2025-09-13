@@ -8,6 +8,19 @@ from django.views.generic import CreateView
 from django.contrib.auth.views import LoginView, LogoutView
 
 
+# LibraryProject/relationship_app/views.py
+
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+from django.contrib.auth.forms import UserCreationForm # <-- This is the required import
+
+class RegisterView(CreateView):
+    """
+    A class-based view to handle user registration.
+    """
+    form_class = UserCreationForm
+    template_name = 'registration/register.html' # Template for the registration form
+    success_url = reverse_lazy('login') # Redirect to the login page after successful registration
 # --- Role check helpers ---
 def is_admin(user):
     return hasattr(user, "userprofile") and user.userprofile.role == "Admin"
