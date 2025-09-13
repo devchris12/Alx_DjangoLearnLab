@@ -9,6 +9,15 @@ from .views import add_book, edit_book, delete_book   # 👈 import the new view
 from django.urls import path
 from django.contrib.auth.views import LoginView, LogoutView
 from . import views
+from .views import list_books, LibraryDetailView, BookListView
+
+
+urlpatterns = [
+    path("books/", list_books, name="list_books"),                     # function-based
+    path("books/list/", BookListView.as_view(), name="book_list"),     # CBV for all books
+    path("library/<int:pk>/", LibraryDetailView.as_view(), name="library_detail"),  # CBV for a library
+]
+
 
 urlpatterns = [
     # Authentication URLs - Required patterns
