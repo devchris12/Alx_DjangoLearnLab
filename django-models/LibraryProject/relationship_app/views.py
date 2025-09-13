@@ -4,6 +4,14 @@ from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 from django.urls import reverse_lazy
+from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, ListView
+from django.views.generic.detail import DetailView   # required explicit import
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.views import LoginView, LogoutView
+from .models import Library, Book
+
 from django.views.generic import CreateView, DetailView, ListView
 from django.contrib.auth.views import LoginView, LogoutView
 from .models import Book, Library
