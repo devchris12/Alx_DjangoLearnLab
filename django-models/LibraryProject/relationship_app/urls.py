@@ -16,6 +16,22 @@ from .models import Book, Library
 
 # ... (other views) ...
 
+# LibraryProject/relationship_app/urls.py
+
+from django.urls import path
+from django.contrib.auth import views as auth_views
+from .views import RegisterView
+
+urlpatterns = [
+    # Login View: Uses Django's built-in LoginView
+    path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
+
+    # Logout View: Uses Django's built-in LogoutView
+    path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'), # Redirects to home page after logout
+
+    # Registration View: Uses the custom RegisterView you created
+    path('register/', RegisterView.as_view(), name='register'),
+]
 # Registration View
 class RegisterView(CreateView):
     form_class = UserCreationForm # <--- And it is used correctly here
