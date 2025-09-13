@@ -10,15 +10,18 @@ from .models import Book, Library
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import permission_required
 from .models import Book
-
 from django.contrib.auth.decorators import user_passes_test
-
-
-
 # your_app/views.py
-
 from django.http import HttpResponse
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.forms import UserCreationForm
+from django.urls import reverse_lazy
+from django.views.generic import CreateView
+
+class RegisterView(CreateView):
+    form_class = UserCreationForm
+    template_name = "relationship_app/register.html"
+    success_url = reverse_lazy("login")
 
 # (Place the is_admin, is_librarian, is_member functions here)
 
