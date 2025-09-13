@@ -5,6 +5,22 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from .models import Book, Library
 
+# relationship_app/views.py
+
+from django.shortcuts import render
+from django.urls import reverse_lazy
+from django.views.generic import CreateView, DetailView, ListView
+from django.contrib.auth.forms import UserCreationForm  # <--- THIS LINE IS PRESENT
+from django.contrib.auth.views import LoginView, LogoutView
+from .models import Book, Library
+
+# ... (other views) ...
+
+# Registration View
+class RegisterView(CreateView):
+    form_class = UserCreationForm # <--- And it is used correctly here
+    template_name = "relationship_app/register.html"
+    success_url = reverse_lazy("login")
 # Function-based view: list all books
 def list_books(request):
     books = Book.objects.all()
