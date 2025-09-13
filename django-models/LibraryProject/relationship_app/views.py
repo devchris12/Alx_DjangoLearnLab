@@ -1,32 +1,31 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth import login, logout, authenticate
-from django.contrib.auth.forms import AuthenticationForm, UserCreationForm  # required import
+from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.contrib.auth.decorators import login_required, user_passes_test, permission_required
 from django.contrib import messages
 from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from django.contrib.auth.views import LoginView, LogoutView
-
-# relationship_app/views.py
-from django.shortcuts import render
-from django.urls import reverse_lazy
 from django.views.generic import CreateView, DetailView, ListView
-from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.views import LoginView, LogoutView
 from .models import Book, Library
-from django.contrib.auth.decorators import user_passes_test
-from django.shortcuts import render
-from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from django.contrib.auth.views import LoginView, LogoutView
+
+# --- Role checking functions ---
+def is_admin(user):
+    """Check if user has Admin role"""
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Admin'
+
+def is_librarian(user):
+    """Check if user has Librarian role"""
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Librarian'
+
+def is_member(user):
+    """Check if user has Member role"""
+    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Member'
+
+# --- Authentication Views ---
 
 # Function-based view for user registration
 def register(request):
+    """Function-based user registration"""
     if request.method == 'POST':
         form = UserCreationForm(request.POST)
         if form.is_valid():
@@ -46,17 +45,19 @@ class RegisterView(CreateView):
 
 # Function-based view for user login
 def login_view(request):
+    """Function-based user login"""
     if request.method == 'POST':
-        username = request.POST['username']
-        password = request.POST['password']
-        user = authenticate(request, username=username, password=password)
-        if user is not None:
+        form = AuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
             login(request, user)
-            messages.success(request, f'Welcome back, {username}!')
-            return redirect('home')  # Redirect to a success page
+            messages.success(request, f'Welcome back, {user.username}!')
+            return redirect('home')
         else:
             messages.error(request, 'Invalid username or password.')
-    return render(request, 'relationship_app/login.html')
+    else:
+        form = AuthenticationForm()
+    return render(request, 'relationship_app/login.html', {'form': form})
 
 # Class-based login view (using Django's built-in LoginView)
 class CustomLoginView(LoginView):
@@ -68,6 +69,7 @@ class CustomLoginView(LoginView):
 
 # Function-based view for user logout
 def logout_view(request):
+    """Function-based logout"""
     logout(request)
     messages.info(request, 'You have been logged out successfully.')
     return redirect('login')
@@ -76,29 +78,8 @@ def logout_view(request):
 class CustomLogoutView(LogoutView):
     next_page = reverse_lazy('login')
 
-# Example of a protected view that requires login
-@login_required
-def profile_view(request):
-    return render(request, 'relationship_app/profile.html', {'user': request.user})
+# --- Role-based views using @user_passes_test decorator ---
 
-# Home view (example)
-def home_view(request):
-    return render(request, 'relationship_app/home.html')
-
-# Role checking functions
-def is_admin(user):
-    """Check if user has Admin role"""
-    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Admin'
-
-def is_librarian(user):
-    """Check if user has Librarian role"""
-    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Librarian'
-
-def is_member(user):
-    """Check if user has Member role"""
-    return user.is_authenticated and hasattr(user, 'userprofile') and user.userprofile.role == 'Member'
-
-# Role-based views using @user_passes_test decorator
 @user_passes_test(is_admin)
 def admin_view(request):
     """Admin-only view accessible only to users with Admin role"""
@@ -122,28 +103,21 @@ def member_view(request):
         'user': request.user,
         'role': 'Member'
     })
-# Role check helpers
-def is_admin(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Admin"
 
-def is_librarian(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Librarian"
+# --- Permission-based views ---
+@permission_required("relationship_app.can_add_book", raise_exception=True)
+def add_book(request):
+    return render(request, "relationship_app/add_book.html")
 
-def is_member(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Member"
+@permission_required("relationship_app.can_change_book", raise_exception=True)
+def edit_book(request):
+    return render(request, "relationship_app/edit_book.html")
 
-# Views
-@user_passes_test(is_admin)
-def admin_view(request):
-    return render(request, "relationship_app/admin_view.html")
+@permission_required("relationship_app.can_delete_book", raise_exception=True)
+def delete_book(request):
+    return render(request, "relationship_app/delete_book.html")
 
-@user_passes_test(is_librarian)
-def librarian_view(request):
-    return render(request, "relationship_app/librarian_view.html")
-
-@user_passes_test(is_member)
-def member_view(request):
-    return render(request, "relationship_app/member_view.html")
+# --- Book and Library Views ---
 
 # Function-based view: list all books
 def list_books(request):
@@ -162,127 +136,13 @@ class BookListView(ListView):
     template_name = "relationship_app/book_list.html"
     context_object_name = "book_list"
 
-# Registration View
-class RegisterView(CreateView):
-    form_class = UserCreationForm
-    template_name = "relationship_app/register.html"
-    success_url = reverse_lazy("login")
+# --- Protected and General Views ---
 
-# LibraryProject/relationship_app/views.py
-
-from django.urls import reverse_lazy
-from django.views.generic import CreateView
-from django.contrib.auth.forms import UserCreationForm # <-- This is the required import
-
-class RegisterView(CreateView):
-    """
-    A class-based view to handle user registration.
-    """
-    form_class = UserCreationForm
-    template_name = 'registration/register.html' # Template for the registration form
-    success_url = reverse_lazy('login') # Redirect to the login page after successful registration
-# --- Role check helpers ---
-def is_admin(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Admin"
-
-def is_librarian(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Librarian"
-
-def is_member(user):
-    return hasattr(user, "userprofile") and user.userprofile.role == "Member"
-
-
-# --- Role-based views ---
-@user_passes_test(is_admin, raise_exception=True)
-def admin_view(request):
-    return render(request, "relationship_app/admin_view.html")
-
-@user_passes_test(is_librarian, raise_exception=True)
-def librarian_view(request):
-    return render(request, "relationship_app/librarian_view.html")
-
-@user_passes_test(is_member, raise_exception=True)
-def member_view(request):
-    return render(request, "relationship_app/member_view.html")
-
-
-# --- Permission-based views ---
-@permission_required("relationship_app.can_add_book", raise_exception=True)
-def add_book(request):
-    return render(request, "relationship_app/add_book.html")
-
-@permission_required("relationship_app.can_change_book", raise_exception=True)
-def edit_book(request):
-    return render(request, "relationship_app/edit_book.html")
-
-@permission_required("relationship_app.can_delete_book", raise_exception=True)
-def delete_book(request):
-    return render(request, "relationship_app/delete_book.html")
-
-
-# --- Authentication views ---
-def register_view(request):
-    """Function-based user registration"""
-    if request.method == "POST":
-        form = UserCreationForm(request.POST)
-        if form.is_valid():
-            user = form.save()
-            login(request, user)  # auto login after register
-            messages.success(request, f"Account created for {user.username}!")
-            return redirect("login")
-    else:
-        form = UserCreationForm()
-    return render(request, "relationship_app/register.html", {"form": form})
-
-
-class RegisterView(CreateView):
-    """Class-based user registration (alternative)"""
-    form_class = UserCreationForm
-    template_name = "relationship_app/register.html"
-    success_url = reverse_lazy("login")
-
-
-def login_view(request):
-    """Function-based user login"""
-    if request.method == "POST":
-        form = AuthenticationForm(data=request.POST)
-        if form.is_valid():
-            user = form.get_user()
-            login(request, user)
-            messages.success(request, f"Welcome back, {user.username}!")
-            return redirect("home")
-        else:
-            messages.error(request, "Invalid username or password.")
-    else:
-        form = AuthenticationForm()
-    return render(request, "relationship_app/login.html", {"form": form})
-
-
-class CustomLoginView(LoginView):
-    """Class-based login (alternative)"""
-    template_name = "relationship_app/login.html"
-    redirect_authenticated_user = True
-
-    def get_success_url(self):
-        return reverse_lazy("home")
-
-
-def logout_view(request):
-    """Function-based logout"""
-    logout(request)
-    messages.info(request, "You have been logged out successfully.")
-    return redirect("login")
-
-
-class CustomLogoutView(LogoutView):
-    """Class-based logout (alternative)"""
-    next_page = reverse_lazy("login")
-
-
-# --- Example protected/profile views ---
 @login_required
 def profile_view(request):
-    return render(request, "relationship_app/profile.html", {"user": request.user})
+    """Protected user profile view"""
+    return render(request, 'relationship_app/profile.html', {'user': request.user})
 
 def home_view(request):
-    return render(request, "relationship_app/home.html")
+    """Home page view"""
+    return render(request, 'relationship_app/home.html')
