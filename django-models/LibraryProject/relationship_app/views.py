@@ -45,6 +45,21 @@ def admin_view(request):
     This view is only accessible to users in the 'Admin' group.
     """
     return HttpResponse("Welcome to the Admin Dashboard.")
+    # your_app/views.py
+
+from django.contrib.auth.decorators import user_passes_test
+
+def is_admin(user):
+    """Checks if the user is in the 'Admin' group."""
+    return user.is_authenticated and user.groups.filter(name='Admin').exists()
+
+def is_librarian(user):
+    """Checks if the user is in the 'Librarian' group."""
+    return user.is_authenticated and user.groups.filter(name='Librarian').exists()
+
+def is_member(user):
+    """Checks if the user is in the 'Member' group."""
+    return user.is_authenticated and user.groups.filter(name='Member').exists()
 
 @user_passes_test(is_librarian, login_url='/accounts/login/')
 def librarian_view(request):
