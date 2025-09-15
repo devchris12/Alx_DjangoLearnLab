@@ -1,3 +1,5 @@
+# api_project/settings.py
+
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -5,10 +7,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
-    # Third-party
-    'rest_framework',   # ✅ DRF
-
-    # Local apps
-    'api',              # ✅ Your new API app
+    'rest_framework',
+    'api',  # Add this line for your new app
 ]
