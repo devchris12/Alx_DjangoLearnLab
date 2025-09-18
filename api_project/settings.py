@@ -7,6 +7,14 @@ SECRET_KEY = 'replace_this_with_a_random_secret_key'  # Django requires a secret
 DEBUG = True                      # True for development (False in production)
 ALLOWED_HOSTS = []                # e.g. ['localhost', '127.0.0.1'] when DEBUG is False
 
+
+
+# api_project/settings.py
+INSTALLED_APPS = [
+    # ... other apps
+    'rest_framework',
+    'api',  # Add this line
+]
 # **Installed Applications**
 INSTALLED_APPS = [
     # Default Django apps:
