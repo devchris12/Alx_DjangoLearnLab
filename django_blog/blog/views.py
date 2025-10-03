@@ -138,13 +138,13 @@ class CommentCreateView(LoginRequiredMixin, CreateView):
 
 
 @login_required
-def add_comment(request, post_id):
+def add_comment(request, pk):
     """
     TASK: CRUD Operations - CREATE
     Add comment to a blog post (CREATE operation).
-    URL structure: /posts/int:post_id/comments/new/
+    URL structure: /post/int:pk/comments/new/
     """
-    post = get_object_or_404(Post, pk=post_id)
+    post = get_object_or_404(Post, pk=pk)
     if request.method == 'POST':
         form = CommentForm(request.POST)
         if form.is_valid():
