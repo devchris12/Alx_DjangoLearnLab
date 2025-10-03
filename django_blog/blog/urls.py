@@ -19,8 +19,8 @@ urlpatterns = [
     path('post/<int:pk>/delete/', views.PostDeleteView.as_view(), name='post_delete'),
     
     # TASK: Ensure URLs are logically structured and intuitive
-    # Comment URLs - Example: /post/int:post_id/comments/new/ for creating a comment
-    path('post/<int:post_id>/comments/new/', views.add_comment, name='add_comment'),
+    # Comment URLs - Example: /post/int:pk/comments/new/ for creating a comment
+    path('post/<int:pk>/comments/new/', views.add_comment, name='add_comment'),
     path('comment/<int:pk>/update/', views.CommentUpdateView.as_view(), name='comment_update'),
     path('comment/<int:pk>/delete/', views.CommentDeleteView.as_view(), name='comment_delete'),
     
