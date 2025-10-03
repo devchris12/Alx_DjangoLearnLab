@@ -221,10 +221,34 @@ def search_posts(request):
     return render(request, 'blog/search_results.html', context)
 
 
+# TASK: Integrate Tagging Functionality & URL Configuration for New Features
+class PostByTagListView(ListView):
+    """
+    TASK: Integrate Tagging Functionality & URL Configuration for New Features
+    Display posts filtered by specific tag using class-based view.
+    Part of the tagging functionality implementation.
+    """
+    model = Post
+    template_name = 'blog/posts_by_tag.html'
+    context_object_name = 'posts'
+    paginate_by = 10
+    
+    def get_queryset(self):
+        """Filter posts by tag slug from URL."""
+        tag_slug = self.kwargs.get('tag_slug')
+        return Post.objects.filter(tags__slug=tag_slug)
+    
+    def get_context_data(self, **kwargs):
+        """Add tag information to context."""
+        context = super().get_context_data(**kwargs)
+        context['tag'] = self.kwargs.get('tag_slug')
+        return context
+
+
 def posts_by_tag(request, tag_slug):
     """
     TASK: Integrate Tagging Functionality
-    Display posts filtered by specific tag.
+    Display posts filtered by specific tag (function-based view for backward compatibility).
     Part of the tagging functionality implementation.
     """
     posts = Post.objects.filter(tags__slug=tag_slug)
