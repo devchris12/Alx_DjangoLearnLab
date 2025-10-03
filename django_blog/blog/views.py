@@ -61,7 +61,10 @@ class PostDetailView(DetailView):
 
 
 class PostCreateView(LoginRequiredMixin, CreateView):
-    """Create new blog post with tagging support."""
+    """
+    TASK: Modify Post Creation and Update Forms
+    Create new blog post with tagging support using modified PostForm.
+    """
     model = Post
     form_class = PostForm
     template_name = 'blog/post_form.html'
@@ -73,12 +76,17 @@ class PostCreateView(LoginRequiredMixin, CreateView):
 
 
 class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """Update existing blog post with tagging support."""
+    """
+    TASK: Modify Post Creation and Update Forms
+    Update existing blog post with tagging support using modified PostForm.
+    Uses LoginRequiredMixin and UserPassesTestMixin to ensure only author can edit.
+    """
     model = Post
     form_class = PostForm
     template_name = 'blog/post_form.html'
     
     def test_func(self):
+        """Ensure only the author of a post can edit it."""
         post = self.get_object()
         return self.request.user == post.author
     
@@ -88,12 +96,16 @@ class PostUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 
 class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    """Delete blog post."""
+    """
+    Delete blog post.
+    Uses LoginRequiredMixin and UserPassesTestMixin to ensure only author can delete.
+    """
     model = Post
     template_name = 'blog/post_confirm_delete.html'
     success_url = reverse_lazy('blog:post_list')
     
     def test_func(self):
+        """Ensure only the author of a post can delete it."""
         post = self.get_object()
         return self.request.user == post.author
     
@@ -102,12 +114,35 @@ class PostDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
         return super().delete(request, *args, **kwargs)
 
 
-# Comment Views - CRUD Operations
+# TASK: CRUD Operations for Comments
+class CommentCreateView(LoginRequiredMixin, CreateView):
+    """
+    TASK: CRUD Operations - CREATE
+    Create new comment on a blog post (CREATE operation).
+    Uses LoginRequiredMixin to ensure only authenticated users can comment.
+    """
+    model = Comment
+    form_class = CommentForm
+    template_name = 'blog/comment_form.html'
+    
+    def form_valid(self, form):
+        # Get the post from URL parameter
+        post = get_object_or_404(Post, pk=self.kwargs['post_id'])
+        form.instance.post = post
+        form.instance.author = self.request.user
+        messages.success(self.request, 'Comment added successfully!')
+        return super().form_valid(form)
+    
+    def get_success_url(self):
+        return reverse_lazy('blog:post_detail', kwargs={'pk': self.object.post.pk})
+
+
 @login_required
 def add_comment(request, post_id):
     """
+    TASK: CRUD Operations - CREATE
     Add comment to a blog post (CREATE operation).
-    URL: /posts/int:post_id/comments/new/
+    URL structure: /posts/int:post_id/comments/new/
     """
     post = get_object_or_404(Post, pk=post_id)
     if request.method == 'POST':
@@ -123,12 +158,17 @@ def add_comment(request, post_id):
 
 
 class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
-    """Update existing comment (UPDATE operation)."""
+    """
+    TASK: CRUD Operations - UPDATE
+    Update existing comment (UPDATE operation).
+    Uses LoginRequiredMixin and UserPassesTestMixin to ensure only author can edit.
+    """
     model = Comment
     form_class = CommentForm
     template_name = 'blog/comment_form.html'
     
     def test_func(self):
+        """Ensure only the author of a comment can edit it."""
         comment = self.get_object()
         return self.request.user == comment.author
     
@@ -138,11 +178,16 @@ class CommentUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
 
 
 class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
-    """Delete comment (DELETE operation)."""
+    """
+    TASK: CRUD Operations - DELETE
+    Delete comment (DELETE operation).
+    Uses LoginRequiredMixin and UserPassesTestMixin to ensure only author can delete.
+    """
     model = Comment
     template_name = 'blog/comment_confirm_delete.html'
     
     def test_func(self):
+        """Ensure only the author of a comment can delete it."""
         comment = self.get_object()
         return self.request.user == comment.author
     
@@ -153,14 +198,16 @@ class CommentDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
 
 def search_posts(request):
     """
+    TASK: Develop Search Functionality
     Search posts by title, content, or tags.
     Implements search functionality using Django's Q objects for complex queries.
+    Allows users to search across multiple fields simultaneously.
     """
     query = request.GET.get('q', '')
     posts = Post.objects.all()
     
     if query:
-        # Use Q objects to search across multiple fields
+        # TASK: Search using Q objects to search across title, content, and tags
         posts = posts.filter(
             Q(title__icontains=query) |
             Q(content__icontains=query) |
@@ -175,7 +222,11 @@ def search_posts(request):
 
 
 def posts_by_tag(request, tag_slug):
-    """Display posts filtered by specific tag."""
+    """
+    TASK: Integrate Tagging Functionality
+    Display posts filtered by specific tag.
+    Part of the tagging functionality implementation.
+    """
     posts = Post.objects.filter(tags__slug=tag_slug)
     context = {
         'posts': posts,
