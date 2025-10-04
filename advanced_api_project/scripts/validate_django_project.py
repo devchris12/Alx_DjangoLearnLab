@@ -6,15 +6,19 @@ Validates the Django REST API project setup and implementation
 
 import os
 import sys
-import django
 from pathlib import Path
 
+script_dir = Path(__file__).resolve().parent
+project_root = script_dir.parent
+project_dir = project_root / 'advanced-api-project'
+
 # Add the project directory to the Python path
-project_dir = Path(__file__).resolve().parent.parent / 'advanced-api-project'
 sys.path.insert(0, str(project_dir))
 
 # Set up Django environment
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'advanced_api.settings')
+
+import django
 django.setup()
 
 from django.core.management import call_command
@@ -71,7 +75,7 @@ def check_django_installation():
         print("\n  Running Django System Checks...")
         f = io.StringIO()
         with redirect_stdout(f), redirect_stderr(f):
-            call_command('check', '--deploy')
+            call_command('check')
         output = f.getvalue()
         
         if "System check identified no issues" in output or not output.strip():
@@ -81,9 +85,8 @@ def check_django_installation():
             print_check("Django System Checks", False, output[:200])
             checks_passed.append(False)
     except Exception as e:
-        # Some deployment checks might fail in development, that's okay
-        print_check("Django System Checks", True, "Basic checks passed (deployment warnings ignored)")
-        checks_passed.append(True)
+        print_check("Django System Checks", False, str(e))
+        checks_passed.append(False)
     
     return all(checks_passed)
 
