@@ -1,14 +1,18 @@
 from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 from datetime import date
 
 
 class Author(models.Model):
     """
     Author model representing book authors.
+    
+    Fields:
+        name: A string field to store the author's name.
+    
+    Relationships:
+        books: One-to-many relationship with Book model (one author can have multiple books).
     """
-    name = models.CharField(max_length=100)
-    bio = models.TextField()
+    name = models.CharField(max_length=100, help_text="The author's full name")
 
     def __str__(self):
         return self.name
@@ -20,31 +24,29 @@ class Author(models.Model):
 class Book(models.Model):
     """
     Book model with a many-to-one relationship to Author.
+    
+    Fields:
+        title: A string field for the book's title.
+        publication_year: An integer field for the year the book was published.
+        author: A foreign key linking to the Author model, establishing a one-to-many 
+                relationship from Author to Books.
+    
+    Relationships:
+        author: Many-to-one relationship with Author model (many books can belong to one author).
+                Uses CASCADE deletion - if an author is deleted, all their books are also deleted.
+                The related_name='books' allows accessing all books by an author via author.books.all()
     """
-    title = models.CharField(max_length=200)
-    isbn = models.CharField(max_length=13, unique=True)
-    published_date = models.DateField()
-    number_of_pages = models.IntegerField(
-        validators=[MinValueValidator(1)]
-    )
+    title = models.CharField(max_length=200, help_text="The title of the book")
+    publication_year = models.IntegerField(help_text="The year the book was published")
     author = models.ForeignKey(
         Author,
         on_delete=models.CASCADE,
-        related_name='books'
+        related_name='books',
+        help_text="The author who wrote this book"
     )
 
     def __str__(self):
-        return self.title
-
-    def clean(self):
-        """
-        Custom validation to ensure published_date is not in the future.
-        """
-        from django.core.exceptions import ValidationError
-        if self.published_date and self.published_date > date.today():
-            raise ValidationError({
-                'published_date': 'Published date cannot be in the future.'
-            })
+        return f"{self.title} ({self.publication_year})"
 
     class Meta:
-        ordering = ['-published_date']
+        ordering = ['-publication_year']
