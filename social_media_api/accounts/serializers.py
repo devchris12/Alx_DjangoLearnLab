@@ -8,7 +8,7 @@ User = get_user_model()
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """
-    Serializer for user registration
+    Serializer for user registration with token generation
     """
     password = serializers.CharField(
         write_only=True,
