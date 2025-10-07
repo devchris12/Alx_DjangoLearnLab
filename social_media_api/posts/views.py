@@ -113,3 +113,47 @@ class FeedView(generics.GenericAPIView):
         serializer = self.serializer_class(posts, many=True)
         return Response(serializer.data)
 
+from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from .models import Post, Like, Notification
+
+class LikePostView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        post = generics.get_object_or_404(Post, pk=pk)
+        user = request.user
+
+        # Check if already liked
+        if Like.objects.filter(user=user, post=post).exists():
+            return Response({"message": "You already liked this post."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Create like
+        Like.objects.create(user=user, post=post)
+
+        # Create notification
+        if post.author != user:
+            Notification.objects.create(
+                recipient=post.author,
+                sender=user,
+                post=post,
+                message=f"{user.username} liked your post."
+            )
+
+        return Response({"message": "Post liked successfully."}, status=status.HTTP_201_CREATED)
+
+
+class UnlikePostView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pk):
+        post = generics.get_object_or_404(Post, pk=pk)
+        user = request.user
+
+        # Check if not liked yet
+        like = Like.objects.filter(user=user, post=post).first()
+        if not like:
+            return Response({"message": "You haven’t liked this post."}, status=status.HTTP_400_BAD_REQUEST)
+
+        like.delete()
+        return Response({"message": "Post unliked successfully."}, status=status.HTTP_200_OK)
