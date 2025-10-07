@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'blog',
+    'posts',
     'accounts',  # Adding accounts app for follow/unfollow functionality
     'taggit',  # For tagging functionality
     'rest_framework',  # Added Django REST Framework for API views
@@ -108,9 +108,9 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Authentication settings
-LOGIN_REDIRECT_URL = 'blog:post_list'
-LOGOUT_REDIRECT_URL = 'blog:post_list'
-LOGIN_URL = 'blog:login'
+LOGIN_REDIRECT_URL = 'posts:post_list'
+LOGOUT_REDIRECT_URL = 'posts:post_list'
+LOGIN_URL = 'posts:login'
 
 # REST Framework configuration
 REST_FRAMEWORK = {
