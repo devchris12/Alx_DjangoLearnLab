@@ -93,3 +93,23 @@ class CommentViewSet(viewsets.ModelViewSet):
         context = super().get_serializer_context()
         context['request'] = self.request
         return context
+        from rest_framework import generics, permissions
+from rest_framework.response import Response
+from .models import Post
+from .serializers import PostSerializer
+
+class FeedView(generics.GenericAPIView):
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = PostSerializer
+
+    def get(self, request):
+        # Get all the users the current user follows
+        following_users = request.user.following.all()
+
+        # Filter posts from followed users, newest first
+        posts = Post.objects.filter(author__in=following_users).order_by('-created_at')
+
+        # Serialize and return them
+        serializer = self.serializer_class(posts, many=True)
+        return Response(serializer.data)
+
