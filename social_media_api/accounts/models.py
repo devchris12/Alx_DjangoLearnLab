@@ -1,42 +1,51 @@
-from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.contrib.auth.models import User
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 
 
-class CustomUser(AbstractUser):
+class Profile(models.Model):
     """
-    Custom user model extending Django's AbstractUser with additional fields
-    for social media functionality.
+    User profile model with following/followers functionality.
+    
+    TASK: Develop views in the accounts app that allow users to follow and unfollow others
+    - ManyToManyField 'following' tracks users that this profile follows
+    - Related name 'followers' allows reverse lookup of who follows this user
     """
-    bio = models.TextField(max_length=500, blank=True, null=True)
-    profile_picture = models.ImageField(
-        upload_to='profile_pictures/',
-        blank=True,
-        null=True
-    )
-    followers = models.ManyToManyField(
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    following = models.ManyToManyField(
         'self',
         symmetrical=False,
-        related_name='following',
+        related_name='followers',
         blank=True
     )
+    bio = models.TextField(max_length=500, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['-created_at']
-
+    
     def __str__(self):
-        return self.username
+        return f'{self.user.username} Profile'
+    
+    def follow(self, profile):
+        """Follow another user's profile"""
+        self.following.add(profile)
+    
+    def unfollow(self, profile):
+        """Unfollow another user's profile"""
+        self.following.remove(profile)
+    
+    def is_following(self, profile):
+        """Check if this profile is following another profile"""
+        return self.following.filter(pk=profile.pk).exists()
 
-    def follow(self, user):
-        """Follow another user"""
-        if user != self:
-            self.following.add(user)
 
-    def unfollow(self, user):
-        """Unfollow a user"""
-        self.following.remove(user)
+@receiver(post_save, sender=User)
+def create_user_profile(sender, instance, created, **kwargs):
+    """Automatically create a profile when a new user is created"""
+    if created:
+        Profile.objects.create(user=instance)
 
-    def is_following(self, user):
-        """Check if this user is following another user"""
-        return self.following.filter(pk=user.pk).exists()
+
+@receiver(post_save, sender=User)
+def save_user_profile(sender, instance, **kwargs):
+    """Save the profile when the user is saved"""
+    instance.profile.save()
