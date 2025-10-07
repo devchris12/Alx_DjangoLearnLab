@@ -1,95 +1,167 @@
-from rest_framework import viewsets, permissions, status, filters
-from rest_framework.decorators import action
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework import generics, status
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from .models import Post, Comment, Like
-from .serializers import PostSerializer, CommentSerializer, LikeSerializer
-from .permissions import IsAuthorOrReadOnly
+from rest_framework.views import APIView
+
+from accounts.models import CustomUser
+from .serializers import (
+    UserLoginSerializer,
+    UserProfileSerializer,
+    UserRegistrationSerializer,
+    UserSerializer
+)
+
+User = get_user_model()
 
 
-class PostViewSet(viewsets.ModelViewSet):
+class UserRegistrationView(generics.CreateAPIView):
     """
-    ViewSet for Post model with CRUD operations
+    API endpoint for user registration.
     """
-    queryset = Post.objects.all()
-    serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['title', 'content']
-    ordering_fields = ['created_at', 'updated_at']
+    queryset = User.objects.all()
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'token': user.token,
+            'message': 'User registered successfully'
+        }, status=status.HTTP_201_CREATED)
 
-    @action(detail=False, methods=['get'], permission_classes=[permissions.IsAuthenticated])
-    def feed(self, request):
-        """
-        Get posts from users that the current user follows
-        """
-        following_users = request.user.following.all()
-        posts = Post.objects.filter(author__in=following_users).order_by('-created_at')
-        
-        page = self.paginate_queryset(posts)
-        if page is not None:
-            serializer = self.get_serializer(page, many=True)
-            return self.get_paginated_response(serializer.data)
-        
-        serializer = self.get_serializer(posts, many=True)
-        return Response(serializer.data)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def like(self, request, pk=None):
-        """
-        Like a post
-        """
-        post = self.get_object()
-        like, created = Like.objects.get_or_create(user=request.user, post=post)
+class UserLoginView(APIView):
+    """
+    API endpoint for user login.
+    """
+    permission_classes = [AllowAny]
+    serializer_class = UserLoginSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
         
-        if created:
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
+        user = authenticate(username=username, password=password)
+        
+        if user is None:
             return Response({
-                'message': 'Post liked successfully'
-            }, status=status.HTTP_201_CREATED)
-        else:
-            return Response({
-                'message': 'You have already liked this post'
-            }, status=status.HTTP_400_BAD_REQUEST)
+                'error': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get or create token for the user
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'token': token.key,
+            'message': 'Login successful'
+        }, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
-    def unlike(self, request, pk=None):
-        """
-        Unlike a post
-        """
-        post = self.get_object()
+
+class UserLogoutView(APIView):
+    """
+    API endpoint for user logout (token deletion).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
         try:
-            like = Like.objects.get(user=request.user, post=post)
-            like.delete()
+            # Delete the user's token
+            request.user.auth_token.delete()
             return Response({
-                'message': 'Post unliked successfully'
+                'message': 'Logout successful'
             }, status=status.HTTP_200_OK)
-        except Like.DoesNotExist:
+        except Exception as e:
             return Response({
-                'error': 'You have not liked this post'
+                'error': str(e)
             }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CommentViewSet(viewsets.ModelViewSet):
+class UserDetailView(generics.RetrieveAPIView):
     """
-    ViewSet for Comment model with CRUD operations
+    API endpoint to retrieve authenticated user details.
     """
-    queryset = Comment.objects.all()
-    serializer_class = CommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsAuthorOrReadOnly]
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        post_id = self.request.query_params.get('post', None)
-        if post_id:
-            queryset = queryset.filter(post_id=post_id)
-        return queryset
+    def get_object(self):
+        return self.request.user
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['request'] = self.request
-        return context
+
+class FollowUserView(generics.GenericAPIView):
+    """
+    API endpoint to follow a user.
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+
+    def post(self, request, user_id):
+        try:
+            user_to_follow = CustomUser.objects.all().get(id=user_id)
+            
+            if user_to_follow == request.user:
+                return Response({
+                    'error': 'You cannot follow yourself'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if request.user.following.filter(id=user_id).exists():
+                return Response({
+                    'error': 'You are already following this user'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            request.user.following.add(user_to_follow)
+            
+            return Response({
+                'message': f'You are now following {user_to_follow.username}',
+                'user': UserSerializer(user_to_follow).data
+            }, status=status.HTTP_200_OK)
+            
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+class UnfollowUserView(generics.GenericAPIView):
+    """
+    API endpoint to unfollow a user.
+    """
+    permission_classes = [IsAuthenticated]
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSerializer
+
+    def post(self, request, user_id):
+        try:
+            user_to_unfollow = CustomUser.objects.all().get(id=user_id)
+            
+            if user_to_unfollow == request.user:
+                return Response({
+                    'error': 'You cannot unfollow yourself'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not request.user.following.filter(id=user_id).exists():
+                return Response({
+                    'error': 'You are not following this user'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            request.user.following.remove(user_to_unfollow)
+            
+            return Response({
+                'message': f'You have unfollowed {user_to_unfollow.username}',
+                'user': UserSerializer(user_to_unfollow).data
+            }, status=status.HTTP_200_OK)
+            
+        except CustomUser.DoesNotExist:
+            return Response({
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
