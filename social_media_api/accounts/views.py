@@ -8,6 +8,7 @@ from .serializers import (
     UserLoginSerializer,
     UserProfileSerializer
 )
+from .models import CustomUser
 
 User = get_user_model()
 
@@ -88,15 +89,16 @@ class UserDetailView(generics.RetrieveAPIView):
         return context
 
 
-class FollowUserView(APIView):
+class FollowUserView(generics.GenericAPIView):
     """
     API endpoint for following a user
     """
     permission_classes = [permissions.IsAuthenticated]
+    queryset = CustomUser.objects.all()  # Using GenericAPIView with CustomUser queryset
 
     def post(self, request, user_id):
         try:
-            user_to_follow = User.objects.get(pk=user_id)
+            user_to_follow = CustomUser.objects.all().get(pk=user_id)
             
             if user_to_follow == request.user:
                 return Response({
@@ -109,28 +111,29 @@ class FollowUserView(APIView):
                 'message': f'You are now following {user_to_follow.username}'
             }, status=status.HTTP_200_OK)
             
-        except User.DoesNotExist:
+        except CustomUser.DoesNotExist:
             return Response({
                 'error': 'User not found'
             }, status=status.HTTP_404_NOT_FOUND)
 
 
-class UnfollowUserView(APIView):
+class UnfollowUserView(generics.GenericAPIView):
     """
     API endpoint for unfollowing a user
     """
     permission_classes = [permissions.IsAuthenticated]
+    queryset = CustomUser.objects.all()  # Using GenericAPIView with CustomUser queryset
 
     def post(self, request, user_id):
         try:
-            user_to_unfollow = User.objects.get(pk=user_id)
+            user_to_unfollow = CustomUser.objects.all().get(pk=user_id)
             request.user.unfollow(user_to_unfollow)
             
             return Response({
                 'message': f'You have unfollowed {user_to_unfollow.username}'
             }, status=status.HTTP_200_OK)
             
-        except User.DoesNotExist:
+        except CustomUser.DoesNotExist:
             return Response({
                 'error': 'User not found'
             }, status=status.HTTP_404_NOT_FOUND)
