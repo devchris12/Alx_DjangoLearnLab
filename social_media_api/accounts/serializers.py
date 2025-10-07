@@ -1,87 +1,96 @@
-from rest_framework import serializers
-from django.contrib.auth import get_user_model
-from django.contrib.auth.password_validation import validate_password
+from django.contrib.auth import authenticate, get_user_model
+from rest_framework import generics, status
 from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .serializers import (
+    UserLoginSerializer,
+    UserProfileSerializer,
+    UserRegistrationSerializer,
+    UserSerializer
+)
 
 User = get_user_model()
 
 
-class UserRegistrationSerializer(serializers.ModelSerializer):
+class UserRegistrationView(generics.CreateAPIView):
     """
-    Serializer for user registration with token generation
+    API endpoint for user registration.
     """
-    password = serializers.CharField(
-        write_only=True,
-        required=True,
-        validators=[validate_password]
-    )
-    password2 = serializers.CharField(write_only=True, required=True)
-    token = serializers.CharField(read_only=True)
+    queryset = User.objects.all()
+    serializer_class = UserRegistrationSerializer
+    permission_classes = [AllowAny]
 
-    class Meta:
-        model = User
-        fields = ('username', 'email', 'password', 'password2', 'bio', 'profile_picture', 'token')
-        extra_kwargs = {
-            'email': {'required': True}
-        }
-
-    def validate(self, attrs):
-        if attrs['password'] != attrs['password2']:
-            raise serializers.ValidationError(
-                {"password": "Password fields didn't match."}
-            )
-        return attrs
-
-    def create(self, validated_data):
-        validated_data.pop('password2')
-        user = get_user_model().objects.create_user(**validated_data)
-        token = Token.objects.create(user=user)
-        user.token = token.key
-        return user
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'token': user.token,
+            'message': 'User registered successfully'
+        }, status=status.HTTP_201_CREATED)
 
 
-class UserLoginSerializer(serializers.Serializer):
+class UserLoginView(APIView):
     """
-    Serializer for user login
+    API endpoint for user login.
     """
-    username = serializers.CharField(required=True)
-    password = serializers.CharField(required=True, write_only=True)
+    permission_classes = [AllowAny]
+    serializer_class = UserLoginSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        username = serializer.validated_data['username']
+        password = serializer.validated_data['password']
+        
+        user = authenticate(username=username, password=password)
+        
+        if user is None:
+            return Response({
+                'error': 'Invalid credentials'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+        
+        # Get or create token for the user
+        token, created = Token.objects.get_or_create(user=user)
+        
+        return Response({
+            'user': UserSerializer(user).data,
+            'token': token.key,
+            'message': 'Login successful'
+        }, status=status.HTTP_200_OK)
 
 
-class UserProfileSerializer(serializers.ModelSerializer):
+class UserLogoutView(APIView):
     """
-    Serializer for user profile display
+    API endpoint for user logout (token deletion).
     """
-    followers_count = serializers.SerializerMethodField()
-    following_count = serializers.SerializerMethodField()
-    is_following = serializers.SerializerMethodField()
+    permission_classes = [IsAuthenticated]
 
-    class Meta:
-        model = User
-        fields = (
-            'id', 'username', 'email', 'bio', 'profile_picture',
-            'followers_count', 'following_count', 'is_following',
-            'created_at', 'updated_at'
-        )
-        read_only_fields = ('id', 'created_at', 'updated_at')
-
-    def get_followers_count(self, obj):
-        return obj.followers.count()
-
-    def get_following_count(self, obj):
-        return obj.following.count()
-
-    def get_is_following(self, obj):
-        request = self.context.get('request')
-        if request and request.user.is_authenticated:
-            return request.user.is_following(obj)
-        return False
+    def post(self, request):
+        try:
+            # Delete the user's token
+            request.user.auth_token.delete()
+            return Response({
+                'message': 'Logout successful'
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            return Response({
+                'error': str(e)
+            }, status=status.HTTP_400_BAD_REQUEST)
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserDetailView(generics.RetrieveAPIView):
     """
-    Basic user serializer for nested representations
+    API endpoint to retrieve authenticated user details.
     """
-    class Meta:
-        model = User
-        fields = ('id', 'username', 'profile_picture')
+    serializer_class = UserProfileSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_object(self):
+        return self.request.user
