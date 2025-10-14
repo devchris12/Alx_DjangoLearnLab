@@ -4,6 +4,8 @@ from django.contrib.auth.decorators import login_required, permission_required, 
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from .models import Book, Library
+from django.contrib.auth.decorators import permission_required
+
 
 
 # Function-based view to list all books
@@ -146,6 +148,21 @@ def register(request):
     else:
         form = UserCreationForm()
     return render(request, 'register.html', {'form': form})
+    @permission_required('relationship_app.add_book')
+def add_book_view(request):
+    # your logic here
+    pass
+
+@permission_required('relationship_app.change_book')
+def edit_book_view(request, book_id):
+    # your logic here
+    pass
+
+@permission_required('relationship_app.delete_book')
+def delete_book_view(request, book_id):
+    # your logic here
+    pass
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
